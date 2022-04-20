@@ -11,8 +11,19 @@ import SwiftUI
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     let manager = CLLocationManager()
+    var startLocation: CLLocation?
+    var traveledDistance = 0.0
+    var straightDistance: Double {
+        guard let lastLocation = lastLocation else {
+            return 0
+        }
+        guard let startLocation = startLocation else {
+            return 0
+        }
+        return startLocation.distance(from: lastLocation)
+    }
 
-    @Published var location: CLLocation?
+    @Published var lastLocation: CLLocation?
 
     override init() {
         super.init()
@@ -20,12 +31,28 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func requestLocation() {
-        manager.requestLocation()
+        manager.requestAlwaysAuthorization()
         manager.startUpdatingLocation()
     }
 
+    func stopLocation() {
+        manager.stopUpdatingLocation()
+        lastLocation = nil
+        startLocation = nil
+    }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        location = locations.first
+        guard let location = locations.last else {return}
+        guard startLocation != nil else {
+            startLocation = location
+            return
+        }
+        guard let lastLocation = lastLocation else {
+            lastLocation = location
+            return
+        }
+
+        traveledDistance += lastLocation.distance(from: location)
+        self.lastLocation = location
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -38,15 +65,21 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            if let location = locationManager.location {
+            Text("Travelled Distance: \(locationManager.traveledDistance)")
+            if let location = locationManager.lastLocation {
+                Text("Straight Distance: \(locationManager.straightDistance)")
                 Text("Your speed: \(location.speed)")
+                Text("Latitude: \(location.coordinate.latitude)")
+                Text("Longitude: \(location.coordinate.longitude)")
+                Button(action: locationManager.stopLocation) {
+                    Text("Stop Recording")
+                }
             }
-
-            LocationButton {
-                locationManager.requestLocation()
+            else {
+                LocationButton {
+                    locationManager.requestLocation()
+                }
             }
-            .frame(height: 44)
-            .padding()
         }
     }
 }
