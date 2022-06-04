@@ -82,7 +82,7 @@ struct ContentView: View {
             if let location = locationManager.lastLocation {
                 Text("Straight Distance: \(locationManager.straightDistance)")
                 Text("Your speed: \(location.speed)")
-                Text("Elapsed time: \(locationManager.elapsedTime)")
+                Text("Elapsed time: \(locationManager.elapsedTime, specifier: "%.2f")")
                 Text("Latitude: \(location.coordinate.latitude)")
                 Text("Longitude: \(location.coordinate.longitude)")
                 Button(action: locationManager.stopLocation) {
