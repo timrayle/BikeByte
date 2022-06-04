@@ -22,7 +22,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
         return startLocation.distance(from: lastLocation)
     }
-
+    var authorized = false
+    var startTime = Date.now
+    var elapsedTime: TimeInterval = 0
     @Published var lastLocation: CLLocation?
 
     override init() {
@@ -31,8 +33,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func requestLocation() {
+        authorized = manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse
         manager.requestAlwaysAuthorization()
         manager.startUpdatingLocation()
+        startTime = Date.now
     }
 
     func stopLocation() {
@@ -53,8 +57,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
         traveledDistance += lastLocation.distance(from: location)
         self.lastLocation = location
+        elapsedTime = Date.now.timeIntervalSince(startTime)
     }
     
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorized = manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse
+    }
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print(error)
     }
@@ -65,10 +73,16 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            Text("Travelled Distance: \(locationManager.traveledDistance)")
+            if !locationManager.authorized {
+                Text("This app will ask for permission to see your location.")
+            }
+            else {
+                Text("Travelled Distance: \(locationManager.traveledDistance)")
+            }
             if let location = locationManager.lastLocation {
                 Text("Straight Distance: \(locationManager.straightDistance)")
                 Text("Your speed: \(location.speed)")
+                Text("Elapsed time: \(locationManager.elapsedTime)")
                 Text("Latitude: \(location.coordinate.latitude)")
                 Text("Longitude: \(location.coordinate.longitude)")
                 Button(action: locationManager.stopLocation) {
@@ -76,8 +90,8 @@ struct ContentView: View {
                 }
             }
             else {
-                LocationButton {
-                    locationManager.requestLocation()
+                Button(action: locationManager.requestLocation) {
+                    Text("Start Recording")
                 }
             }
         }
@@ -87,5 +101,6 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .previewInterfaceOrientation(.portraitUpsideDown)
     }
 }
